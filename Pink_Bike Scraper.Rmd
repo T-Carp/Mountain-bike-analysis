@@ -1,0 +1,111 @@
+---
+title: "Pink Bike Scraper"
+output: html_notebook
+---
+
+
+### Essential Packages
+```{r}
+library(tidyverse)
+library(rvest)
+library(xml2)
+library(jsonlite)
+library(ggplot2)
+```
+
+
+```{r}
+
+df_list <- list()
+
+url <- paste("https://www.pinkbike.com/buysell/list/?location=194-*-*&page=1&category=2")
+page <- read_html(url)
+  
+### Find total results
+total_count <- html_node(page, 'li:nth-child(13) a') %>% 
+  html_text() %>% 
+  as.numeric()
+  
+### Create vector of page results.  
+pages <- c(1:total_count)
+
+for (l in 1:length(pages))
+{
+  page_data <- paste("https://www.pinkbike.com/buysell/list/?location=194-*-*&page=",pages[l],"&category=2", sep = "") %>% read_html()
+  
+  title <- html_nodes(page_data, '.bsitem div a') %>% 
+    html_text(trim = TRUE) 
+   
+  
+  # condition <- html_nodes(page_data, 'br+ div') %>% 
+  #   html_text(trim=TRUE) 
+  
+  
+  # material <- html_nodes(page_data, '.bsitem div:nth-child(4)') %>% 
+  #   html_text(trim=TRUE)
+    
+  
+  # frame_size <- html_nodes(page_data, '.bsitem div:nth-child(5)') %>% 
+  #   html_text(trim=TRUE) 
+     
+  
+  # wheel_size <- html_nodes(page_data, '.bsitem div:nth-child(6)') %>% 
+  #   html_text(trim=TRUE)
+      
+  
+  # front_travel <- html_nodes(page, '.bsitem div:nth-child(7)') %>% 
+  #   html_text(trim=TRUE) %>% 
+  #   if(length(.) == 0) NA else .
+       
+  
+  # rear_travel <- html_nodes(page_data, '.bsitem div:nth-child(8)') %>% 
+  #   html_text(trim=TRUE)
+
+  
+  location <- html_nodes(page_data, '.bsitem td tr:nth-child(1) td') %>% 
+    html_text(trim=TRUE) 
+        
+  
+  price <- html_nodes(page_data, 'tr~ tr+ tr td > b') %>% 
+    html_text(trim=TRUE)  
+  
+  df_list[[l]] <- data_frame(title, location, price )
+}
+
+df <- as_tibble(bind_rows(df_list)) 
+df$price <- str_remove(df$price,"USD")
+df$price <- as.numeric(str_remove(df$price,"\\$"))
+
+df <- df %>% 
+  filter(price > 500 & price < 10000)
+
+
+p <- ggplot(df, aes(x=price)) + 
+  geom_histogram()
+```
+
+
+
+### Munge the dataframe
+```{r}
+### Extract year from string
+library(stringr)
+df <- df %>% 
+  mutate(year = str_extract(df$title, "\\d{4}"),
+         title = str_remove(df$title,"\\d{4}"),
+         )
+ 
+
+### str replace santa crus with sant_cruz and rocky mountain with rocky_mountain
+### Remove _ when it is in one column.
+df <- df %>% 
+  mutate(title  = trimws(title))
+
+df <- df %>% 
+  mutate(brand = trimws(word(df$title,1,1)))
+      
+
+
+
+```
+
