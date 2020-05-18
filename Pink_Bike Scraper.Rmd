@@ -13,7 +13,7 @@ library(jsonlite)
 library(ggplot2)
 ```
 
-
+### Scrape Pink Bike, Create Data Frame
 ```{r}
 
 df_list <- list()
@@ -34,6 +34,9 @@ for (l in 1:length(pages))
   page_data <- paste("https://www.pinkbike.com/buysell/list/?location=194-*-*&page=",pages[l],"&category=2", sep = "") %>% read_html()
   
   title <- html_nodes(page_data, '.bsitem div a') %>% 
+    html_text(trim = TRUE) 
+  
+  seller <- html_nodes(page_data, '.bsitem b+ a') %>% 
     html_text(trim = TRUE) 
    
   
@@ -69,15 +72,10 @@ for (l in 1:length(pages))
   price <- html_nodes(page_data, 'tr~ tr+ tr td > b') %>% 
     html_text(trim=TRUE)  
   
-  df_list[[l]] <- data_frame(title, location, price )
+  df_list[[l]] <- data_frame(title, seller, location, price )
 }
 
 df <- as_tibble(bind_rows(df_list)) 
-df$price <- str_remove(df$price,"USD")
-df$price <- as.numeric(str_remove(df$price,"\\$"))
-
-df <- df %>% 
-  filter(price > 500 & price < 10000)
 
 
 p <- ggplot(df, aes(x=price)) + 
@@ -86,26 +84,42 @@ p <- ggplot(df, aes(x=price)) +
 
 
 
-### Munge the dataframe
+### Data Prep
 ```{r}
 ### Extract year from string
 library(stringr)
+
+### Remove duplicate posts
+df<- distinct(df)
+
+### Clean price column
+df$price <- str_remove(df$price,"USD")
+df$price <- as.numeric(str_remove(df$price,"\\$"))
+
+### Filter out outliers
+df <- df %>% 
+  filter(price > 500 & price < 10000) 
+
+### Create date columns
 df <- df %>% 
   mutate(year = str_extract(df$title, "\\d{4}"),
-         title = str_remove(df$title,"\\d{4}"),
-         )
- 
+         title = str_remove(df$title,"\\d{4}"))
 
-### str replace santa crus with sant_cruz and rocky mountain with rocky_mountain
-### Remove _ when it is in one column.
+### Prep for string
+df$title <- str_replace_all(df$title, "Santa Cruz", "Santa_Cruz")
+df$title <- str_replace_all(df$title, "SANTA CRUZ", "Santa_Cruz")
+df$title <- str_replace_all(df$title, "Rocky Mountain", "Rocky_Mountain")
+
 df <- df %>% 
   mutate(title  = trimws(title))
 
+### Create model and brand columns
 df <- df %>% 
-  mutate(brand = trimws(word(df$title,1,1)))
-      
-
-
+  mutate(brand = trimws(word(df$title,1,1,)),
+         model = trimws(word(df$title,2,2,))
+         ) %>% 
+  separate(location,c("city", "state", "country"), sep = ",", remove = FALSE)
+ 
 
 ```
 
