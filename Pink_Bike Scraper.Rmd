@@ -94,7 +94,7 @@ df<- distinct(df)
 
 ### Clean price column
 df$price <- str_remove(df$price,"USD")
-df$price <- as.numeric(str_remove(df$price,"\\$"))
+df$price <- as.integer(str_remove(df$price,"\\$"))
 
 ### Filter out outliers
 df <- df %>% 
@@ -116,10 +116,118 @@ df <- df %>%
 ### Create model and brand columns
 df <- df %>% 
   mutate(brand = trimws(word(df$title,1,1,)),
-         model = trimws(word(df$title,2,2,))
+         model = trimws(word(df$title,2,2,)),
+         year = as.numeric(year)
          ) %>% 
   separate(location,c("city", "state", "country"), sep = ",", remove = FALSE)
+
  
+
+```
+
+
+### Built Cross tab of Bike brands by Value and Year
+```{r}
+names <- df %>% 
+  select(brand) %>% 
+  group_by(brand) %>% 
+  summarize(count = n()) %>% 
+  filter(count >= 30, brand != c("Large", "Custom", "Stumpjumper"))
+
+
+df_price <- df %>% 
+  select(brand,price, year) %>% 
+  filter(year >= 2013, brand %in% names$brand) %>% 
+  group_by(brand,year) %>% 
+  summarise(count = n(),avg_price = round(mean(price)))%>% 
+  arrange(desc(year), .by_group = TRUE) %>% 
+  mutate(pct_change = round((avg_price/lag(avg_price) - 1) * 100),
+         pct_depreciation = round(avg_price/max(avg_price) * 100))
+
+df_price$pct_change[is.na(df_price$pct_change)] <- 100
+
+
+   
+  
+
+q <- ggplot(df_price, aes(reorder(year, desc(year)),avg_price)+geom_line()
+q
+
+selection <- unique(df_price$brand)
+
+q <- ggplot() +
+  geom_line(data = df_price %>% filter(brand %in% selection), aes(x = reorder(year, desc(year)), y = pct_depreciation, color = brand, group = brand), size = 1)+
+  xlab("Model Year") +
+  ylab("Percent of Original Value")
+
+
+
+```
+
+### Shiny UI
+```{r}
+library(shiny)
+ui <- fluidPage(
+
+  # App title ----
+  titlePanel("Hello Shiny!"),
+
+  # Sidebar layout with input and output definitions ----
+  sidebarLayout(
+
+    # Sidebar panel for inputs ----
+    sidebarPanel(
+
+      # Input: Slider for the number of bins ----
+      checkboxGroupInput("checkGroup", 
+                              h3("Checkbox group"), 
+                              choices = unique(df_price$brand),
+                              selected = 1)
+
+    ),
+
+    # Main panel for displaying outputs ----
+    mainPanel(
+
+      # Output: Histogram ----
+      plotOutput(outputId = "distPlot")
+
+    )
+  )
+)
+
+```
+### Server Script
+```{r}
+server <- function(input, output) {
+
+  # Histogram of the Old Faithful Geyser Data ----
+  # with requested number of bins
+  # This expression that generates a histogram is wrapped in a call
+  # to renderPlot to indicate that:
+  #
+  # 1. It is "reactive" and therefore should be automatically
+  #    re-executed when inputs (input$bins) change
+  # 2. Its output type is a plot
+  output$distPlot <- renderPlot({
+
+    x    <- ggplot() +
+  geom_line(data = df_price %>% filter(brand %in% selection), 
+            aes(x = reorder(year, desc(year)), 
+                y = pct_depreciation, 
+                color = brand, 
+                group = brand), size = 1)+
+  xlab("Model Year") +
+  ylab("Percent of Original Value")
+    
+    })
+
+}
+```
+
+```{r}
+shinyApp(ui, server)
+
 
 ```
 
