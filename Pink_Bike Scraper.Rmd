@@ -11,6 +11,8 @@ library(rvest)
 library(xml2)
 library(jsonlite)
 library(ggplot2)
+library(gganimate)
+suppressMessages(library(plotly))
 ```
 
 ### Scrape Pink Bike, Create Data Frame
@@ -78,8 +80,7 @@ for (l in 1:length(pages))
 df <- as_tibble(bind_rows(df_list)) 
 
 
-p <- ggplot(df, aes(x=price)) + 
-  geom_histogram()
+
 ```
 
 
@@ -117,6 +118,7 @@ df <- df %>%
 df <- df %>% 
   mutate(brand = trimws(word(df$title,1,1,)),
          model = trimws(word(df$title,2,2,)),
+         model = tolower(model),
          year = as.numeric(year)
          ) %>% 
   separate(location,c("city", "state", "country"), sep = ",", remove = FALSE)
@@ -126,15 +128,16 @@ df <- df %>%
 ```
 
 
-### Built Cross tab of Bike brands by Value and Year
+### Clean data
 ```{r}
+### Get list of most popular brands in dataset
 names <- df %>% 
   select(brand) %>% 
   group_by(brand) %>% 
   summarize(count = n()) %>% 
   filter(count >= 30, brand != c("Large", "Custom", "Stumpjumper"))
 
-
+### Build DF for asking price analysis over time
 df_price <- df %>% 
   select(brand,price, year) %>% 
   filter(year >= 2013, brand %in% names$brand) %>% 
@@ -147,30 +150,19 @@ df_price <- df %>%
 df_price$pct_change[is.na(df_price$pct_change)] <- 100
 
 
-   
-  
-
-q <- ggplot(df_price, aes(reorder(year, desc(year)),avg_price)+geom_line()
-q
-
-selection <- unique(df_price$brand)
-
-q <- ggplot() +
-  geom_line(data = df_price %>% filter(brand %in% selection), aes(x = reorder(year, desc(year)), y = pct_depreciation, color = brand, group = brand), size = 1)+
-  xlab("Model Year") +
-  ylab("Percent of Original Value")
-
-
+top_brands <- unique(names$brand)
+df_price <- df_price %>% filter(brand %in% top_brands)
 
 ```
 
-### Shiny UI
+### Shiny UI for Line Chart
 ```{r}
 library(shiny)
+library(shinyWidgets)
 ui <- fluidPage(
 
   # App title ----
-  titlePanel("Hello Shiny!"),
+  titlePanel("Average Asking Price Per Brand Over Time"),
 
   # Sidebar layout with input and output definitions ----
   sidebarLayout(
@@ -182,7 +174,7 @@ ui <- fluidPage(
       checkboxGroupInput("checkGroup", 
                               h3("Checkbox group"), 
                               choices = unique(df_price$brand),
-                              selected = 1)
+                              selected = "Commencal")
 
     ),
 
@@ -190,44 +182,138 @@ ui <- fluidPage(
     mainPanel(
 
       # Output: Histogram ----
-      plotOutput(outputId = "distPlot")
+      plotOutput("distPlot")
 
     )
   )
 )
 
 ```
-### Server Script
+### Server Script Line Chart
 ```{r}
 server <- function(input, output) {
+  
+  
+   data <- reactive({df_price %>% filter(brand %in% input$checkGroup)}) 
 
-  # Histogram of the Old Faithful Geyser Data ----
-  # with requested number of bins
-  # This expression that generates a histogram is wrapped in a call
-  # to renderPlot to indicate that:
-  #
-  # 1. It is "reactive" and therefore should be automatically
-  #    re-executed when inputs (input$bins) change
-  # 2. Its output type is a plot
   output$distPlot <- renderPlot({
-
-    x    <- ggplot() +
-  geom_line(data = df_price %>% filter(brand %in% selection), 
-            aes(x = reorder(year, desc(year)), 
-                y = pct_depreciation, 
-                color = brand, 
-                group = brand), size = 1)+
+  ggplot(data(),aes(x = reorder(year, desc(year)), 
+                y = avg_price)) + geom_line( 
+            aes(color = brand,group = brand), size = 1)+
   xlab("Model Year") +
-  ylab("Percent of Original Value")
-    
+  ylab("Average Asking Price")
+   
+
+ 
     })
+}
+```
+### Run Sript
+```{r}
+shinyApp(ui, server)
+
+```
+
+
+
+### Data Cleasne for Chart 2
+```{r}
+### Create df for reactive filters
+df_model_names <- df %>% 
+  select(brand, model) %>% 
+  filter(brand %in% top_brands) %>% 
+  group_by(brand,model) %>% 
+  summarise(count = n())
+
+df_model_names <- df_model_names %>% filter(count >= 6)
+
+### Create df for brand+model price analysis
+df_model_price <- df %>% 
+  select(brand,model,price, year) %>%
+  filter(year >= 2013, brand %in% names$brand, model %in% df_model_names$model) %>% 
+  arrange(brand)
+
+
+
+```
+
+
+
+
+### Shiny UI for Average 
+```{r}
+library(shiny)
+ui <- fluidPage(
+
+  # App title ----
+  titlePanel("Average Asking Price Per Brand Over Time"),
+
+  # Sidebar layout with input and output definitions ----
+  sidebarLayout(
+
+    # Sidebar panel for inputs ----
+    sidebarPanel(
+
+      # Input: Slider for the number of bins ----
+      
+      selectInput("select1", 
+                              h3("Select Brand"), 
+                              choices = unique(df_model_price$brand),
+                              selected = NULL),
+      pickerInput("select2", 
+                              h3("Select Model"),
+                              choices = NULL,
+                              options = list(`actions-box` = TRUE),
+                              multiple = TRUE,
+                              selected = NULL
+                              )
+
+    ),
+
+    # Main panel for displaying outputs ----
+    mainPanel(
+
+      # Output: Histogram ----
+      plotOutput("scatter")
+
+    )
+  )
+)
+```
+
+### Server Script Dist Chart
+```{r}
+server <- function(input, output,session) {
+  
+  
+   filter_model <- reactive({
+    filter(df_model_price, brand == input$select1)
+  })
+   
+  observeEvent(filter_model(), {
+    choices <- unique(filter_model()$model)
+    updatePickerInput(session,"select2", choices = choices, selected = choices) 
+  })
+
+  
+  
+  data <- reactive({df_model_price %>% filter(brand %in% input$select1,model %in% input$select2)}) 
+  
+  
+  output$scatter <- renderPlot({
+  ggplot(data(),aes(x = reorder(year, desc(year)), y = price)) + 
+      geom_point(aes(color = model), size = 1)+
+  geom_smooth(method = lm)+
+  xlab("Model Year") +
+  ylab("Asking Price") 
+    
+  })
+   
 
 }
+
 ```
 
 ```{r}
 shinyApp(ui, server)
-
-
 ```
-
