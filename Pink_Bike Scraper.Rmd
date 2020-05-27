@@ -74,7 +74,7 @@ for (l in 1:length(pages))
   price <- html_nodes(page_data, 'tr~ tr+ tr td > b') %>% 
     html_text(trim=TRUE)  
   
-  df_list[[l]] <- data_frame(title, seller, location, price )
+  df_list[[l]] <- tibble(title, seller, location, price )
 }
 
 df <- as_tibble(bind_rows(df_list)) 
@@ -216,7 +216,7 @@ shinyApp(ui, server)
 
 
 
-### Data Cleasne for Chart 2
+### Data Cleanse for Chart 2
 ```{r}
 ### Create df for reactive filters
 df_model_names <- df %>% 
@@ -264,8 +264,8 @@ ui <- fluidPage(
                               h3("Select Model"),
                               choices = NULL,
                               options = list(`actions-box` = TRUE),
-                              multiple = TRUE,
-                              selected = NULL
+                              multiple = TRUE
+                           
                               )
 
     ),
@@ -274,7 +274,9 @@ ui <- fluidPage(
     mainPanel(
 
       # Output: Histogram ----
-      plotOutput("scatter")
+      plotlyOutput("scatter")
+      
+      #### IDEA.  Add data table details report below scatter.  Full add, make, model, location, year, price below average, 
 
     )
   )
@@ -297,13 +299,18 @@ server <- function(input, output,session) {
 
   
   
-  data <- reactive({df_model_price %>% filter(brand %in% input$select1,model %in% input$select2)}) 
+  data <- reactive({
+    df_model_price %>% filter(model %in% input$select2)
+    }) 
   
   
-  output$scatter <- renderPlot({
+  output$scatter <- renderPlotly({
+    validate(
+      need(!is.null(input$select2), "Loading...")
+    )
   ggplot(data(),aes(x = reorder(year, desc(year)), y = price)) + 
-      geom_point(aes(color = model), size = 1)+
-  geom_smooth(method = lm)+
+      geom_point(aes(color = model), size = 3)+
+      stat_summary(fun.y=mean, geom="line",lwd=1,aes(group=2))+
   xlab("Model Year") +
   ylab("Asking Price") 
     
