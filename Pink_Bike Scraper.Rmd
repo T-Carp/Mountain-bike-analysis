@@ -13,6 +13,8 @@ library(jsonlite)
 library(ggplot2)
 library(gganimate)
 suppressMessages(library(plotly))
+suppressMessages(library(ggthemes))
+suppressMessages(library(DT))
 ```
 
 ### Scrape Pink Bike, Create Data Frame
@@ -229,7 +231,7 @@ df_model_names <- df_model_names %>% filter(count >= 6)
 
 ### Create df for brand+model price analysis
 df_model_price <- df %>% 
-  select(brand,model,price, year) %>%
+  select(brand,model,price, year, seller, location) %>%
   filter(year >= 2013, brand %in% names$brand, model %in% df_model_names$model) %>% 
   arrange(brand)
 
@@ -274,7 +276,13 @@ ui <- fluidPage(
     mainPanel(
 
       # Output: Histogram ----
-      plotlyOutput("scatter")
+      plotlyOutput("scatter"),
+      
+    fluidRow(
+        column(12,
+          dataTableOutput('table')
+              )
+            )
       
       #### IDEA.  Add data table details report below scatter.  Full add, make, model, location, year, price below average, 
 
@@ -282,6 +290,12 @@ ui <- fluidPage(
   )
 )
 ```
+
+### Goal  Use existing filter to filter data table output underneath the scatter bar
+### Goal 2, use clicks within first scatter to alter appearance of second tabler
+
+
+
 
 ### Server Script Dist Chart
 ```{r}
@@ -308,13 +322,18 @@ server <- function(input, output,session) {
     validate(
       need(!is.null(input$select2), "Loading...")
     )
-  ggplot(data(),aes(x = reorder(year, desc(year)), y = price)) + 
-      geom_point(aes(color = model), size = 3)+
+    model_year <- reorder(data()$year, desc(data()$year))
+  ggplot(data(),aes(x = model_year, y = price)) + 
+      geom_point(aes(color = model), size = 1.5)+
       stat_summary(fun.y=mean, geom="line",lwd=1,aes(group=2))+
+    theme_tufte()+
   xlab("Model Year") +
   ylab("Asking Price") 
     
   })
+  
+  
+  output$table <- DT::renderDataTable(data())
    
 
 }
