@@ -12,6 +12,7 @@ library(xml2)
 library(jsonlite)
 library(ggplot2)
 library(gganimate)
+suppressMessages(library(crosstalk))
 suppressMessages(library(plotly))
 suppressMessages(library(ggthemes))
 suppressMessages(library(DT))
@@ -43,7 +44,9 @@ for (l in 1:length(pages))
   seller <- html_nodes(page_data, '.bsitem b+ a') %>% 
     html_text(trim = TRUE) 
    
-  
+   url <- html_nodes(page_data, '.bsitem div a') %>% 
+    html_attr("href")
+ 
   # condition <- html_nodes(page_data, 'br+ div') %>% 
   #   html_text(trim=TRUE) 
   
@@ -76,7 +79,7 @@ for (l in 1:length(pages))
   price <- html_nodes(page_data, 'tr~ tr+ tr td > b') %>% 
     html_text(trim=TRUE)  
   
-  df_list[[l]] <- tibble(title, seller, location, price )
+  df_list[[l]] <- tibble(title, seller, location, price, url )
 }
 
 df <- as_tibble(bind_rows(df_list)) 
@@ -231,7 +234,7 @@ df_model_names <- df_model_names %>% filter(count >= 6)
 
 ### Create df for brand+model price analysis
 df_model_price <- df %>% 
-  select(brand,model,price, year, seller, location) %>%
+  select(title, brand,model,price, year, location, url) %>%
   filter(year >= 2013, brand %in% names$brand, model %in% df_model_names$model) %>% 
   arrange(brand)
 
@@ -245,6 +248,7 @@ df_model_price <- df %>%
 ### Shiny UI for Average 
 ```{r}
 library(shiny)
+library(shinyWidgets)
 ui <- fluidPage(
 
   # App title ----
@@ -277,10 +281,10 @@ ui <- fluidPage(
 
       # Output: Histogram ----
       plotlyOutput("scatter"),
-      
+
     fluidRow(
         column(12,
-          dataTableOutput('table')
+          DTOutput('table')
               )
             )
       
@@ -302,9 +306,9 @@ ui <- fluidPage(
 server <- function(input, output,session) {
   
   
-   filter_model <- reactive({
-    filter(df_model_price, brand == input$select1)
-  })
+filter_model <- reactive({
+                           filter(df_model_price, brand == input$select1)
+                        })
    
   observeEvent(filter_model(), {
     choices <- unique(filter_model()$model)
@@ -315,31 +319,40 @@ server <- function(input, output,session) {
   
   data <- reactive({
     df_model_price %>% filter(model %in% input$select2)
-    }) 
-  
-  
+    })
+
+ shared_data <- highlight_key(data, key = ~url)
+ 
+ 
   output$scatter <- renderPlotly({
     validate(
       need(!is.null(input$select2), "Loading...")
     )
-    model_year <- reorder(data()$year, desc(data()$year))
-  ggplot(data(),aes(x = model_year, y = price)) + 
-      geom_point(aes(color = model), size = 1.5)+
-      stat_summary(fun.y=mean, geom="line",lwd=1,aes(group=2))+
-    theme_tufte()+
-  xlab("Model Year") +
-  ylab("Asking Price") 
+  options(persistent = TRUE)  
+  model_year <- reorder(shared_data$data()$year, desc(shared_data$data()$year))
     
+  plot_ly(shared_data, x = ~model_year, y = ~price, color = ~model, type="scatter") %>% 
+  highlight(on = "plotly_selected", off = "plotly_deselect", persistent = TRUE)
+     
+
   })
   
   
-  output$table <- DT::renderDataTable(data())
+  output$table <- renderDT(
+
+       shared_data$data(withSelection = TRUE) %>% filter(if(!is.na(selected_)) selected_ == TRUE else model %in% input$select2) %>% 
+                  mutate(url = paste0("<a href='",url,"'>",url,"</a>")),escape = FALSE)
    
 
 }
+
+
+
 
 ```
 
 ```{r}
 shinyApp(ui, server)
 ```
+
+
