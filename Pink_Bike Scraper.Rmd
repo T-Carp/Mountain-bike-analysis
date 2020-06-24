@@ -196,7 +196,7 @@ ui <- fluidPage(
     # Main panel for displaying outputs ----
     mainPanel(
  titlePanel("A look at the asking price of used mountain bikes on Pinkbike.com"),
-p("Use the filters on the left to explore how different mountaib bike models are priced. To see the table info for a specific point on the chart, click and drag your cursor to select multiple items in the scatter plot."),
+p("Use the filters on the left to explore how different bike models are priced and how asking-prices depreciate over time. Drag your cursor over specific points on the scatter plot to filter the table below it."),
 
 
 
