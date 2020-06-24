@@ -160,68 +160,8 @@ df_price <- df_price %>% filter(brand %in% top_brands)
 
 ```
 
-### Shiny UI for Line Chart
-```{r}
-library(shiny)
-library(shinyWidgets)
-ui <- fluidPage(
 
-  # App title ----
-  titlePanel("Average Asking Price Per Brand Over Time"),
-
-  # Sidebar layout with input and output definitions ----
-  sidebarLayout(
-
-    # Sidebar panel for inputs ----
-    sidebarPanel(
-
-      # Input: Slider for the number of bins ----
-      checkboxGroupInput("checkGroup", 
-                              h3("Checkbox group"), 
-                              choices = unique(df_price$brand),
-                              selected = "Commencal")
-
-    ),
-
-    # Main panel for displaying outputs ----
-    mainPanel(
-
-      # Output: Histogram ----
-      plotOutput("distPlot")
-
-    )
-  )
-)
-
-```
-### Server Script Line Chart
-```{r}
-server <- function(input, output) {
-  
-  
-   data <- reactive({df_price %>% filter(brand %in% input$checkGroup)}) 
-
-  output$distPlot <- renderPlot({
-  ggplot(data(),aes(x = reorder(year, desc(year)), 
-                y = avg_price)) + geom_line( 
-            aes(color = brand,group = brand), size = 1)+
-  xlab("Model Year") +
-  ylab("Average Asking Price")
-   
-
- 
-    })
-}
-```
-### Run Sript
-```{r}
-shinyApp(ui, server)
-
-```
-
-
-
-### Data Cleanse for Chart 2
+### Data Cleanse for Shiny
 ```{r}
 ### Create df for reactive filters
 df_model_names <- df %>% 
@@ -243,8 +183,6 @@ df_model_price <- df %>%
 ```
 
 
-
-
 ### Shiny UI for Average 
 ```{r}
 library(shiny)
@@ -252,32 +190,28 @@ library(shinyWidgets)
 ui <- fluidPage(
 
   # App title ----
-  titlePanel("Average Asking Price Per Brand Over Time"),
 
   # Sidebar layout with input and output definitions ----
-  sidebarLayout(
 
-    # Sidebar panel for inputs ----
-    sidebarPanel(
+    # Main panel for displaying outputs ----
+    mainPanel(
+ titlePanel("A look at the asking price of used mountain bikes on Pinkbike.com"),
+p("Use the filters on the left to explore how different mountaib bike models are priced. To see the table info for a specific point on the chart, click and drag your cursor to select multiple items in the scatter plot."),
 
-      # Input: Slider for the number of bins ----
-      
-      selectInput("select1", 
+
+
+div(style="display: inline-block;vertical-align:top; width: 300px;", selectInput("select1", 
                               h3("Select Brand"), 
                               choices = unique(df_model_price$brand),
-                              selected = NULL),
-      pickerInput("select2", 
+                              selected = NULL)),
+      div(style="display: inline-block;vertical-align:top; width: 300px;",pickerInput("select2", 
                               h3("Select Model"),
                               choices = NULL,
                               options = list(`actions-box` = TRUE),
                               multiple = TRUE
                            
-                              )
+                              )),
 
-    ),
-
-    # Main panel for displaying outputs ----
-    mainPanel(
 
       # Output: Histogram ----
       plotlyOutput("scatter"),
@@ -292,11 +226,8 @@ ui <- fluidPage(
 
     )
   )
-)
-```
 
-### Goal  Use existing filter to filter data table output underneath the scatter bar
-### Goal 2, use clicks within first scatter to alter appearance of second tabler
+```
 
 
 
@@ -328,20 +259,31 @@ filter_model <- reactive({
     validate(
       need(!is.null(input$select2), "Loading...")
     )
-  options(persistent = TRUE)  
   model_year <- reorder(shared_data$data()$year, desc(shared_data$data()$year))
     
-  plot_ly(shared_data, x = ~model_year, y = ~price, color = ~model, type="scatter") %>% 
-  highlight(on = "plotly_selected", off = "plotly_deselect", persistent = TRUE)
+  
+   p <- ggplot(shared_data,aes(x = model_year, y = price)) + 
+      geom_point(aes(color = NULL), size = 1)+
+      stat_summary(fun.y=mean, geom="line",lwd=1,aes(group=2))+
+    theme_tufte()+
+  xlab("Model Year") +
+  ylab("Asking Price") 
+   
+   
+ ggplotly(p)%>% 
+  highlight(on = "plotly_selected", off = "plotly_deselect", persistent = FALSE) 
+   
+
      
+
 
   })
   
   
   output$table <- renderDT(
 
-       shared_data$data(withSelection = TRUE) %>% filter(if(!is.na(selected_)) selected_ == TRUE else model %in% input$select2) %>% 
-                  mutate(url = paste0("<a href='",url,"'>",url,"</a>")),escape = FALSE)
+       shared_data$data(withSelection = TRUE) %>% filter(selected_ | is.na(selected_)) %>% 
+                  mutate(url = paste0("<a href='",url,"'>",url,"</a>")),escape = FALSE) 
    
 
 }
