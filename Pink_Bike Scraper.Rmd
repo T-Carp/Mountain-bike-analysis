@@ -217,7 +217,7 @@ ui <- fluidPage(
     # Main panel for displaying outputs ----
     mainPanel(
  titlePanel("A look at the asking price of used mountain bikes on Pinkbike.com"),
-p("Use the filters on the left to explore how different bike models are priced and how asking-prices depreciate over time. Drag your cursor over specific points on the scatter plot to filter the table below it."),
+p("Use the filters below to explore how different bike models are priced and how asking-prices depreciate over time. Drag your cursor over specific points on the scatter plot to filter the table below it.  Double click anywhere in the chart to reset the filter"),
 
 
 
@@ -284,7 +284,7 @@ filter_model <- reactive({
     
   
    p <- ggplot(shared_data,aes(x = model_year, y = price)) + 
-      geom_point(aes(color = NULL), size = 1)+
+      geom_jitter(aes(color = NULL), size = 1)+
       stat_summary(fun.y=mean, geom="line",lwd=1,aes(group=2))+
     theme_tufte()+
   xlab("Model Year") +
