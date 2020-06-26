@@ -20,14 +20,29 @@ suppressMessages(library(DT))
 
 ### Scrape Pink Bike, Create Data Frame
 ```{r}
+#Function to navigate to new URL and grab updated date for post
+get_date <- function(session, link) {
+  more_details_pg <- jump_to(session,link)  
+  row_with_date <- html_node(more_details_pg,'tr:nth-child(4) td+ td')
+  date_text <- str_extract(row_with_date %>% html_text(),
+                         "([a-zA-Z]{3,}-[0-9]{1,2}-[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2})")
+  return(date_text)
+}
 
+```
+
+
+```{r}
 df_list <- list()
 
 url <- paste("https://www.pinkbike.com/buysell/list/?location=194-*-*&page=1&category=2")
-page <- read_html(url)
-  
+
+###Start web session. Imagine this is the script actively doing stuff on the page
+session <- html_session(url)
+###Grab HMTL for main page
+
 ### Find total results
-total_count <- html_node(page, 'li:nth-child(13) a') %>% 
+total_count <- html_node(session, 'li:nth-child(13) a') %>% 
   html_text() %>% 
   as.numeric()
   
@@ -36,55 +51,57 @@ pages <- c(1:total_count)
 
 for (l in 1:length(pages))
 {
-  page_data <- paste("https://www.pinkbike.com/buysell/list/?location=194-*-*&page=",pages[l],"&category=2", sep = "") %>% read_html()
-  
-  title <- html_nodes(page_data, '.bsitem div a') %>% 
+new_url <- paste("https://www.pinkbike.com/buysell/list/?location=194-*-*&page=",pages[l],"&category=2", sep = "")
+session <- html_session(new_url)
+  title <- html_nodes(session, '.bsitem div a') %>% 
     html_text(trim = TRUE) 
   
-  seller <- html_nodes(page_data, '.bsitem b+ a') %>% 
+  seller <- html_nodes(session, '.bsitem b+ a') %>% 
     html_text(trim = TRUE) 
    
-   url <- html_nodes(page_data, '.bsitem div a') %>% 
+  url <- html_nodes(session, '.bsitem div a') %>% 
     html_attr("href")
+   
+  dates <- get_more_links <- html_nodes(session, '.bsitem td:nth-child(1) a') %>%
+    html_attr("href") %>% .[matches("buysell", vars=.)] %>% unique() %>%
+    sapply(get_date,session = session) 
  
-  # condition <- html_nodes(page_data, 'br+ div') %>% 
+  # condition <- html_nodes(session, 'br+ div') %>% 
   #   html_text(trim=TRUE) 
   
   
-  # material <- html_nodes(page_data, '.bsitem div:nth-child(4)') %>% 
+  # material <- html_nodes(session, '.bsitem div:nth-child(4)') %>% 
   #   html_text(trim=TRUE)
     
   
-  # frame_size <- html_nodes(page_data, '.bsitem div:nth-child(5)') %>% 
+  # frame_size <- html_nodes(session, '.bsitem div:nth-child(5)') %>% 
   #   html_text(trim=TRUE) 
      
   
-  # wheel_size <- html_nodes(page_data, '.bsitem div:nth-child(6)') %>% 
+  # wheel_size <- html_nodes(session, '.bsitem div:nth-child(6)') %>% 
   #   html_text(trim=TRUE)
       
   
-  # front_travel <- html_nodes(page, '.bsitem div:nth-child(7)') %>% 
+  # front_travel <- html_nodes(session, '.bsitem div:nth-child(7)') %>% 
   #   html_text(trim=TRUE) %>% 
   #   if(length(.) == 0) NA else .
        
   
-  # rear_travel <- html_nodes(page_data, '.bsitem div:nth-child(8)') %>% 
+  # rear_travel <- html_nodes(session, '.bsitem div:nth-child(8)') %>% 
   #   html_text(trim=TRUE)
 
   
-  location <- html_nodes(page_data, '.bsitem td tr:nth-child(1) td') %>% 
+  location <- html_nodes(session, '.bsitem td tr:nth-child(1) td') %>% 
     html_text(trim=TRUE) 
         
   
-  price <- html_nodes(page_data, 'tr~ tr+ tr td > b') %>% 
+  price <- html_nodes(session, 'tr~ tr+ tr td > b') %>% 
     html_text(trim=TRUE)  
   
-  df_list[[l]] <- tibble(title, seller, location, price, url )
+  df_list[[l]] <- tibble(title, seller, location, price, url,dates)
 }
 
 df <- as_tibble(bind_rows(df_list)) 
-
-
 
 ```
 
@@ -94,6 +111,8 @@ df <- as_tibble(bind_rows(df_list))
 ```{r}
 ### Extract year from string
 library(stringr)
+### Clean up dates
+library(lubridate)
 
 ### Remove duplicate posts
 df<- distinct(df)
@@ -128,7 +147,9 @@ df <- df %>%
          ) %>% 
   separate(location,c("city", "state", "country"), sep = ",", remove = FALSE)
 
- 
+### Convert date to datetime
+df <- df %>% mutate(dates = mdy_hms(dates)) %>% rename(updated_at = dates)
+print(df %>% summary())
 
 ```
 
