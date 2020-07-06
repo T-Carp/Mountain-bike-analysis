@@ -15,6 +15,25 @@ suppressMessages(library(crosstalk))
 suppressMessages(library(plotly))
 suppressMessages(library(ggthemes))
 suppressMessages(library(DT))
+
+creds <- read.csv("/Users/t-carpen93/Data Projects/Credentials/creds.csv")
+user <- as.character(creds[,2:2])
+password <- as.character(creds[,3:3])
+
+### Get data from DB.  Creds read from local file
+cn <- dbConnect(RMySQL::MySQL(), 
+          
+                username = user, 
+                password = password, 
+                host = "shredsleds.ch4frojqjmlp.us-west-2.rds.amazonaws.com", 
+                port = 3306,
+                dbname = "bikes"
+                )
+
+query <- "SELECT * FROM model_price_summary"
+df_model_price <- dbGetQuery(cn, query)
+
+
 ui <- fluidPage(
 
   # App title ----
