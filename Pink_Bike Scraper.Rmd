@@ -1,6 +1,6 @@
 ---
 title: "Pink Bike Scraper"
-output: html_notebook
+
 ---
 
 

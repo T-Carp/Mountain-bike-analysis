@@ -1,6 +1,6 @@
 ---
 title: "Create Database Tables"
-output: html_notebook
+
 ---
 
 
