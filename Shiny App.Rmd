@@ -3,8 +3,6 @@ title: "R Notebook"
 output: html_notebook
 ---
 
-
-
 ### Shiny UI
 ```{r}
 library(shiny)
@@ -30,7 +28,7 @@ cn <- dbConnect(RMySQL::MySQL(),
                 dbname = "bikes"
                 )
 
-query <- "SELECT * FROM model_price_summary"
+query <- "SELECT * FROM model_price_view"
 df_model_price <- dbGetQuery(cn, query)
 
 

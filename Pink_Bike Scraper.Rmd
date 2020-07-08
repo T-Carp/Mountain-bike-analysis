@@ -121,42 +121,42 @@ df <- as_tibble(bind_rows(df_list))
 ### Data Prep to master dataframe
 ```{r}
 ### Remove duplicate posts
-df<- distinct(df)
+  df<- distinct(df)
 
 ### Clean price column
-df$price <- str_remove(df$price,"USD")
-df$price <- as.integer(str_remove(df$price,"\\$"))
+  df$price <- str_remove(df$price,"USD")
+  df$price <- as.integer(str_remove(df$price,"\\$"))
 
 ### Remove outliers
-df <- df %>% 
-  filter(price > 500 & price < 10000) 
+  df <- df %>% 
+    filter(price > 500 & price < 10000) 
 
 ### Create date columns and Sold/Available Flag
-df <- df %>% 
-  mutate(year = str_extract(df$title, "\\d{4}"),
-         title = str_remove(df$title,"\\d{4}"),
-         sold = ifelse(str_detect(df$sold, "Sold"),"Sold","Available")) %>% 
-  rename(bike_status = sold)
+  df <- df %>% 
+    mutate(year = str_extract(df$title, "\\d{4}"),
+          title = str_remove(df$title,"\\d{4}"),
+          sold = ifelse(str_detect(df$sold, "Sold"),"Sold","Available")) %>% 
+    rename(sold_status = sold)
 
 ### Prep for string
-df$title <- str_replace_all(df$title, "Santa Cruz", "Santa_Cruz")
-df$title <- str_replace_all(df$title, "SANTA CRUZ", "Santa_Cruz")
-df$title <- str_replace_all(df$title, "Rocky Mountain", "Rocky_Mountain")
+  df$title <- str_replace_all(df$title, "Santa Cruz", "Santa_Cruz")
+  df$title <- str_replace_all(df$title, "SANTA CRUZ", "Santa_Cruz")
+  df$title <- str_replace_all(df$title, "Rocky Mountain", "Rocky_Mountain")
 
-df <- df %>% 
-  mutate(title  = trimws(title))
+  df <- df %>% 
+    mutate(title  = trimws(title))
 
 ### Create model and brand columns
-df <- df %>% 
-  mutate(brand = trimws(word(df$title,1,1,)),
-         model = trimws(word(df$title,2,2,)),
-         model = tolower(model),
-         year = as.numeric(year)
-         ) %>% 
-  separate(location,c("city", "state", "country"), sep = ",", remove = FALSE)
+  df <- df %>% 
+    mutate(brand = trimws(word(df$title,1,1,)),
+          model = trimws(word(df$title,2,2,)),
+          model = tolower(model),
+          year = as.numeric(year)
+          ) %>% 
+    separate(location,c("city", "state", "country"), sep = ",", remove = FALSE)
 
 ### Convert date to datetime
-df <- df %>% mutate(dates = mdy_hms(dates)) %>% rename(updated_at = dates)
+  df <- df %>% mutate(dates = mdy_hms(dates)) %>% rename(updated_at = dates)
 
 
 ```
@@ -170,7 +170,6 @@ user <- as.character(creds[,2:2])
 password <- as.character(creds[,3:3])
 
 cn <- dbConnect(RMySQL::MySQL(), 
-          
                 username = user, 
                 password = password, 
                 host = "shredsleds.ch4frojqjmlp.us-west-2.rds.amazonaws.com", 
@@ -183,7 +182,7 @@ db_data <- dbGetQuery(cn, query)
 
 `%notin%` <- Negate(`%in%`)
 
-dftest <- df %>% 
+df <- df %>% 
   filter(url %notin% db_data$url)
 
 ```
@@ -191,7 +190,7 @@ dftest <- df %>%
 ### Create dataframe of sold bikes
 ```{r}
 sold_df <- df %>% 
-  filter(status == "Sold")
+  filter(sold_status == "Sold")
 
 ```
 
@@ -239,7 +238,7 @@ df_model_names <- df_model_names %>% filter(count >= 6)
 
 ### Create df for brand+model price analysis
 df_model_price <- df %>% 
-  select(title, brand,model,price, year, location, url, sold) %>%
+  select(title, brand,model,price, year, location, url, sold_status) %>%
   filter(year >= 2013, brand %in% names$brand, model %in% df_model_names$model) %>% 
   arrange(brand)
 
@@ -262,11 +261,10 @@ cn <- dbConnect(RMySQL::MySQL(),
                 dbname = "bikes"
                 )
 
-
-
-
-
-
+dbWriteTable(cn, name = "bikes_master", value = df, append = TRUE)
+dbWriteTable(cn, name = "sold_bikes", value = sold_df, append = TRUE)
+dbWriteTable(cn, name = "model_price_summary", value = df_model_price, append = TRUE)
+dbWriteTable(cn, name = "brand_price_summary", value = df_price, append = TRUE)
 
 ```
 

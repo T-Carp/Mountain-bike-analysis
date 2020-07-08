@@ -24,8 +24,8 @@ cn <- dbConnect(RMySQL::MySQL(),
 
 dbWriteTable(cn, name = "bikes_master", value = df)
 dbWriteTable(cn, name = "sold_bikes", value = sold_df)
-dbWriteTable(cn, name = "model_price_summary", value = df_model_price)
-dbWriteTable(cn, name = "brand_price_summary", value = df_price)
+dbWriteTable(cn, name = "model_price_view", value = df_model_price)
+dbWriteTable(cn, name = "brand_price_view", value = df_price)
 dbDisconnect(cn)
 
 ```
