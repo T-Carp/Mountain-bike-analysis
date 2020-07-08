@@ -1,0 +1,137 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+### Shiny UI
+```{r}
+library(shiny)
+library(shinyWidgets)
+suppressMessages(library(ggplot2))
+suppressMessages(library(gganimate))
+suppressMessages(library(crosstalk))
+suppressMessages(library(plotly))
+suppressMessages(library(ggthemes))
+suppressMessages(library(DT))
+
+creds <- read.csv("/Users/t-carpen93/Data Projects/Credentials/creds.csv")
+user <- as.character(creds[,2:2])
+password <- as.character(creds[,3:3])
+
+### Get data from DB.  Creds read from local file
+cn <- dbConnect(RMySQL::MySQL(), 
+          
+                username = user, 
+                password = password, 
+                host = "shredsleds.ch4frojqjmlp.us-west-2.rds.amazonaws.com", 
+                port = 3306,
+                dbname = "bikes"
+                )
+
+query <- "SELECT * FROM model_price_view"
+df_model_price <- dbGetQuery(cn, query)
+
+
+ui <- fluidPage(
+
+  # App title ----
+
+  # Sidebar layout with input and output definitions ----
+
+    # Main panel for displaying outputs ----
+    mainPanel(
+ titlePanel("A look at the asking price of used mountain bikes on Pinkbike.com"),
+p("Use the filters below to explore how different bike models are priced and how asking-prices depreciate over time. Drag your cursor over specific points on the scatter plot to filter the table below it.  Double click anywhere in the chart to reset the filter"),
+
+
+
+div(style="display: inline-block;vertical-align:top; width: 300px;", selectInput("select1", 
+                              h3("Select Brand"), 
+                              choices = unique(df_model_price$brand),
+                              selected = NULL)),
+      div(style="display: inline-block;vertical-align:top; width: 300px;",pickerInput("select2", 
+                              h3("Select Model"),
+                              choices = NULL,
+                              options = list(`actions-box` = TRUE),
+                              multiple = TRUE
+                           
+                              )),
+
+
+      # Output: Histogram ----
+      plotlyOutput("scatter"),
+
+    fluidRow(
+        column(12,
+          DTOutput('table')
+              )
+            )
+      
+      #### IDEA.  Add data table details report below scatter.  Full add, make, model, location, year, price below average, 
+
+    )
+  )
+
+```
+
+### Server 
+```{r}
+server <- function(input, output,session) {
+  
+  
+filter_model <- reactive({
+                           filter(df_model_price, brand == input$select1)
+                        })
+   
+  observeEvent(filter_model(), {
+    choices <- unique(filter_model()$model)
+    updatePickerInput(session,"select2", choices = choices, selected = choices) 
+  })
+
+  
+  
+  data <- reactive({
+    df_model_price %>% filter(model %in% input$select2)
+    })
+
+ shared_data <- highlight_key(data, key = ~url)
+ 
+ 
+  output$scatter <- renderPlotly({
+    validate(
+      need(!is.null(input$select2), "Loading...")
+    )
+  model_year <- reorder(shared_data$data()$year, desc(shared_data$data()$year))
+    
+  
+   p <- ggplot(shared_data,aes(x = model_year, y = price)) + 
+      geom_jitter(aes(color = NULL), size = 1)+
+      stat_summary(fun.y=mean, geom="line",lwd=1,aes(group=2))+
+    theme_tufte()+
+  xlab("Model Year") +
+  ylab("Asking Price") 
+   
+   
+ ggplotly(p)%>% 
+  highlight(on = "plotly_selected", off = "plotly_deselect", persistent = FALSE) 
+   
+
+  })
+  
+  
+  output$table <- renderDT(
+
+       shared_data$data(withSelection = TRUE) %>% filter(selected_ | is.na(selected_)) %>% 
+                  mutate(url = paste0("<a href='",url,"'>",url,"</a>")),escape = FALSE) 
+   
+
+}
+
+
+
+
+```
+
+```{r}
+shinyApp(ui, server)
+```

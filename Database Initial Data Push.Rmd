@@ -1,0 +1,32 @@
+---
+title: "Create Database Tables"
+output: html_notebook
+---
+
+
+```{r}
+library(RMySQL)
+library(DBI)
+creds <- read.csv("/Users/t-carpen93/Data Projects/Credentials/creds.csv")
+user <- as.character(creds[,2:2])
+password <- as.character(creds[,3:3])
+
+cn <- dbConnect(RMySQL::MySQL(), 
+          
+                username = user, 
+                password = password, 
+                host = "shredsleds.ch4frojqjmlp.us-west-2.rds.amazonaws.com", 
+                port = 3306,
+                dbname = "bikes"
+                )
+
+
+
+dbWriteTable(cn, name = "bikes_master", value = df)
+dbWriteTable(cn, name = "sold_bikes", value = sold_df)
+dbWriteTable(cn, name = "model_price_view", value = df_model_price)
+dbWriteTable(cn, name = "brand_price_view", value = df_price)
+dbDisconnect(cn)
+
+```
+
