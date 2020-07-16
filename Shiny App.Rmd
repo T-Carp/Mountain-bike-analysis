@@ -13,6 +13,7 @@ suppressMessages(library(crosstalk))
 suppressMessages(library(plotly))
 suppressMessages(library(ggdark))
 suppressMessages(library(DT))
+suppressMessages(library(scales))
 library(shinythemes)
 
 creds <- read.csv("/Users/t-carpen93/Data Projects/Credentials/creds.csv")
@@ -39,13 +40,26 @@ df_model_price <- dbGetQuery(cn, query)
 
 ### User Experience
 ```{r}
-ui <- navbarPage("Used Bikes",position ="static-top",theme = shinytheme("flatly"),
-  
+ui <- bootstrapPage(theme = shinytheme("flatly"),
+                  
+h1("MTB Price Analysis", 
+      style = "font-family: 'Lato',
+        font-weight: 400; line-height: 1.1; 
+        color: #FFFFFF;
+        text-align:center;
+   background-color:#2C3E50;
+   height:50%;
+   bottom-padding: 25px;
+   margin: 0px;"),
 
+fluidRow( 
+           div("",style="height:35px")
+          ),
 
 fluidRow( 
            column(3,""),
-           column(6,p("Use the filters below to explore how different bike models are priced and how asking-prices depreciate over time. Drag your cursor over specific points on the scatter plot to filter the table below it.  Double click anywhere in the chart to reset the filter", align = "center")),
+           column(6,p("Is this bike a good deal?   How is it priced compared to other models?   What price should I sell my bike for?") , 
+                    p("Using data from pinkbike.com ads, we can explore how different bike models are priced and how asking-prices change over time.  This tool can also help you quickly spot bikes priced below the average."), align = "center"),
            column(3,"")),
 
 fluidRow( 
@@ -129,8 +143,13 @@ filter_model <- reactive({
    p <- ggplot(shared_data,aes(x = model_year, y = price)) + 
       geom_jitter(color = "#5DBC9B", size = 1)+
       stat_summary(fun.y=mean, geom="line",lwd=1,aes(group=2),color = "#2C3E50")+
-    theme_tufte()+
-  xlab("Model Year") +
+    theme_fivethirtyeight()+
+     theme(
+          plot.title = element_text(color="#2C3E50", size=14, family="Lato"),
+          plot.subtitle = element_text(color="#2C3E50", size=7, family="Lato"))+
+  scale_y_continuous(labels = dollar)+
+  labs(title = "Asking Price By Model Year")+
+  xlab("Model Year")+
   ylab("Asking Price") 
    
    
