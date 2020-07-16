@@ -42,13 +42,13 @@ df_model_price <- dbGetQuery(cn, query)
 ```{r}
 ui <- bootstrapPage(theme = shinytheme("flatly"),
                   
-h1("MTB Price Analysis", 
+h1("MTB Deal Spotter", 
       style = "font-family: 'Lato',
         font-weight: 400; line-height: 1.1; 
         color: #FFFFFF;
         text-align:center;
    background-color:#2C3E50;
-   height:50%;
+   height:50px;
    bottom-padding: 25px;
    margin: 0px;"),
 
@@ -59,20 +59,20 @@ fluidRow(
 fluidRow( 
            column(3,""),
            column(6,p("Is this bike a good deal?   How is it priced compared to other models?   What price should I sell my bike for?") , 
-                    p("Using data from pinkbike.com ads, we can explore how different bike models are priced and how asking-prices change over time.  This tool can also help you quickly spot bikes priced below the average."), align = "center"),
+                    p("Using data from pinkbike.com ads, we can explore how different bike models are priced and how asking-prices change over time.  This tool can also help you quickly spot potential deals"), align = "center"),
            column(3,"")),
 
 fluidRow( 
           column(4,""),
           column(2, 
-                 div(style="display: inline-block;vertical-align:top; align = center;width:100%", 
+                 div(style="display: inline-block;vertical-align:top; align = center;width:100%;text-align:center", 
                         pickerInput("select1", 
                               h3("Select Brand"), 
                               choices = unique(df_model_price$brand),
                               selected = NULL))),
         
          column(2,
-           div(style="display: inline-block;align = center;width:100%",
+           div(style="display: inline-block;align = center;width:100%;text-align:center",
                  pickerInput("select2", 
                               h3("Select Model"),
                               choices = NULL,
