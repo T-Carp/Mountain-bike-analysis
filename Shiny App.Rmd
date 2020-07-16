@@ -3,7 +3,7 @@ title: "R Notebook"
 
 ---
 
-### Shiny UI
+### Shiny Packages and Data Load
 ```{r}
 library(shiny)
 library(shinyWidgets)
@@ -11,8 +11,10 @@ suppressMessages(library(ggplot2))
 suppressMessages(library(gganimate))
 suppressMessages(library(crosstalk))
 suppressMessages(library(plotly))
-suppressMessages(library(ggthemes))
+suppressMessages(library(ggdark))
 suppressMessages(library(DT))
+suppressMessages(library(scales))
+library(shinythemes)
 
 creds <- read.csv("/Users/t-carpen93/Data Projects/Credentials/creds.csv")
 user <- as.character(creds[,2:2])
@@ -30,47 +32,81 @@ cn <- dbConnect(RMySQL::MySQL(),
 
 query <- "SELECT * FROM model_price_view"
 df_model_price <- dbGetQuery(cn, query)
+```
 
+### Align filters within bootsrap columns
+###Align plotly graph within bootstrap columns
+### Explore plotly themes
 
-ui <- fluidPage(
+### User Experience
+```{r}
+ui <- bootstrapPage(theme = shinytheme("flatly"),
+                  
+h1("MTB Deal Spotter", 
+      style = "font-family: 'Lato',
+        font-weight: 400; line-height: 1.1; 
+        color: #FFFFFF;
+        text-align:center;
+   background-color:#2C3E50;
+   height:50px;
+   bottom-padding: 25px;
+   margin: 0px;"),
 
-  # App title ----
+fluidRow( 
+           div("",style="height:35px")
+          ),
 
-  # Sidebar layout with input and output definitions ----
+fluidRow( 
+           column(3,""),
+           column(6,p("Is this bike a good deal?   How is it priced compared to other models?   What price should I sell my bike for?") , 
+                    p("Using data from pinkbike.com ads, we can explore how different bike models are priced and how asking-prices change over time.  This tool can also help you quickly spot potential deals"), align = "center"),
+           column(3,"")),
 
-    # Main panel for displaying outputs ----
-    mainPanel(
- titlePanel("A look at the asking price of used mountain bikes on Pinkbike.com"),
-p("Use the filters below to explore how different bike models are priced and how asking-prices depreciate over time. Drag your cursor over specific points on the scatter plot to filter the table below it.  Double click anywhere in the chart to reset the filter"),
-
-
-
-div(style="display: inline-block;vertical-align:top; width: 300px;", selectInput("select1", 
+fluidRow( 
+          column(4,""),
+          column(2, 
+                 div(style="display: inline-block;vertical-align:top; align = center;width:100%;text-align:center", 
+                        pickerInput("select1", 
                               h3("Select Brand"), 
                               choices = unique(df_model_price$brand),
-                              selected = NULL)),
-      div(style="display: inline-block;vertical-align:top; width: 300px;",pickerInput("select2", 
+                              selected = NULL))),
+        
+         column(2,
+           div(style="display: inline-block;align = center;width:100%;text-align:center",
+                 pickerInput("select2", 
                               h3("Select Model"),
                               choices = NULL,
                               options = list(`actions-box` = TRUE),
                               multiple = TRUE
                            
-                              )),
+                              ))),
 
+          column(4,"")
+        ),
+
+fluidRow( 
+           div("",style="height:35px")
+          ),
 
       # Output: Histogram ----
-      plotlyOutput("scatter"),
-
-    fluidRow(
-        column(12,
-          DTOutput('table')
-              )
-            )
+fluidRow( 
+            column(3,""),
+            column(6, div(plotlyOutput("scatter"),style="display: width:100%; align = center")),
+            column(3,"")
+          ),
+fluidRow( 
+           div("",style="height:35px")
+          ),
+fluidRow(
+          column(2,""),
+          column(8, div(DTOutput('table'),style="width:100%")),
+          column(2,"")
+        )
       
-      #### IDEA.  Add data table details report below scatter.  Full add, make, model, location, year, price below average, 
+
 
     )
-  )
+
 
 ```
 
@@ -105,10 +141,15 @@ filter_model <- reactive({
     
   
    p <- ggplot(shared_data,aes(x = model_year, y = price)) + 
-      geom_jitter(aes(color = NULL), size = 1)+
-      stat_summary(fun.y=mean, geom="line",lwd=1,aes(group=2))+
-    theme_tufte()+
-  xlab("Model Year") +
+      geom_jitter(color = "#5DBC9B", size = 1)+
+      stat_summary(fun.y=mean, geom="line",lwd=1,aes(group=2),color = "#2C3E50")+
+    theme_fivethirtyeight()+
+     theme(
+          plot.title = element_text(color="#2C3E50", size=14, family="Lato"),
+          plot.subtitle = element_text(color="#2C3E50", size=7, family="Lato"))+
+  scale_y_continuous(labels = dollar)+
+  labs(title = "Asking Price By Model Year")+
+  xlab("Model Year")+
   ylab("Asking Price") 
    
    
