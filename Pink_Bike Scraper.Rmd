@@ -129,7 +129,7 @@ df <- as_tibble(bind_rows(df_list))
 
 ### Remove outliers
   df <- df %>% 
-    filter(price > 500 & price < 10000) 
+    filter(price > 1000 & price < 10000) 
 
 ### Create date columns and Sold/Available Flag
   df <- df %>% 
@@ -156,8 +156,8 @@ df <- as_tibble(bind_rows(df_list))
     separate(location,c("city", "state", "country"), sep = ",", remove = FALSE)
 
 ### Convert date to datetime
-  df <- df %>% mutate(dates = mdy_hms(dates)) %>% rename(updated_at = dates)
-
+  df <- df %>% mutate(dates = mdy_hms(dates)) %>% rename(updated_at = dates) 
+  df_current <- df
 
 ```
 
@@ -180,6 +180,7 @@ cn <- dbConnect(RMySQL::MySQL(),
 query <- "SELECT url FROM bikes_master"
 db_data <- dbGetQuery(cn, query)
 
+
 `%notin%` <- Negate(`%in%`)
 
 df <- df %>% 
@@ -198,14 +199,14 @@ sold_df <- df %>%
 ####Parent dataframe = df.  Child dataframes = c("df_price","df_model_names") and are derived from df
 ```{r}
 ### Get list of most popular brands in dataset.  Brand has to appear > 30 times.
-names <- df %>% 
+names <- df_current %>% 
     select(brand) %>% 
     group_by(brand) %>% 
     summarize(count = n()) %>% 
-    filter(count >= 30, brand != c("Large", "Custom", "Stumpjumper", "Carbon"))
+    filter(count >= 20, brand != c("Large", "Custom", "Stumpjumper", "Carbon"))
 
-### Build df_price which can be used to measure % depreciation in asking price over time.
-df_price <- df %>% 
+### Build df_price which can be used to measure % depreciation in asking price over time. Overwrite table in database
+df_price <- df_current %>% 
   select(brand,price, year) %>% 
   filter(year >= 2013, brand %in% names$brand) %>% 
   group_by(brand,year) %>% 
@@ -213,6 +214,7 @@ df_price <- df %>%
   arrange(desc(year), .by_group = TRUE) %>% 
   mutate(pct_change = round((avg_price/lag(avg_price) - 1) * 100),
          pct_depreciation = round(avg_price/max(avg_price) * 100))
+
 
 df_price$pct_change[is.na(df_price$pct_change)] <- 100
 
@@ -227,9 +229,9 @@ df_price <- as.tibble(df_price)
 ### Create df_model_price which is the data source for the shiny app. 
 ```{r}
 ### Create df for reactive filters
-df_model_names <- df %>% 
+df_model_names <- df_current %>% 
   select(brand, model) %>% 
-  filter(brand %in% top_brands) %>% 
+  filter(brand %in% top_brands, model != "carbon") %>% 
   group_by(brand,model) %>% 
   summarise(count = n())
 
@@ -237,34 +239,30 @@ df_model_names <- df %>%
 df_model_names <- df_model_names %>% filter(count >= 6)
 
 ### Create df for brand+model price analysis
-df_model_price <- df %>% 
+df_model_price <- df_current %>% 
   select(title, brand,model,price, year, location, url, sold_status) %>%
   filter(year >= 2013, brand %in% names$brand, model %in% df_model_names$model) %>% 
   arrange(brand)
 
 
-
 ```
 
-### Append new data to database tables.
+### Append/ overwrite data to database tables.
 ```{r}
-creds <- read.csv("/Users/t-carpen93/Data Projects/Credentials/creds.csv")
-user <- as.character(creds[,2:2])
-password <- as.character(creds[,3:3])
 
-cn <- dbConnect(RMySQL::MySQL(), 
-          
-                username = user, 
-                password = password, 
-                host = "shredsleds.ch4frojqjmlp.us-west-2.rds.amazonaws.com", 
-                port = 3306,
-                dbname = "bikes"
-                )
-
+###Master table to adds not cleaned. Always Growing
 dbWriteTable(cn, name = "bikes_master", value = df, append = TRUE)
-dbWriteTable(cn, name = "sold_bikes", value = sold_df, append = TRUE)
-dbWriteTable(cn, name = "model_price_summary", value = df_model_price, append = TRUE)
-dbWriteTable(cn, name = "brand_price_summary", value = df_price, append = TRUE)
 
+### Master list of bikes that are sold.  Always growing
+dbWriteTable(cn, name = "sold_bikes", value = sold_df, append = TRUE)
+
+### Used for shiny app, table is always over-written to show bikes currently on pinkbike
+dbWriteTable(cn, name = "model_price_view", value = df_model_price, overwrite = TRUE)
+
+### Datamart for price analysis, table is always over-written for bikes currently on pinkbike
+dbWriteTable(cn, name = "brand_price_view", value = df_price, overwrite = TRUE)
+
+
+dbDisconnect(cn)
 ```
 
