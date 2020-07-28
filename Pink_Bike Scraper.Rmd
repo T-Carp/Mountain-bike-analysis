@@ -121,7 +121,7 @@ df <- as_tibble(bind_rows(df_list))
 ### Data Prep to master dataframe
 ```{r}
 ### Remove duplicate posts
-  df<- distinct(df)
+  df <- distinct(df)
 
 ### Clean price column
   df$price <- str_remove(df$price,"USD")
@@ -221,7 +221,7 @@ df_price$pct_change[is.na(df_price$pct_change)] <- 100
 
 top_brands <- unique(names$brand)
 df_price <- df_price %>% filter(brand %in% top_brands)
-df_price <- as.tibble(df_price)
+df_price <- as_tibble(df_price)
 
 ```
 
@@ -241,7 +241,7 @@ df_model_names <- df_model_names %>% filter(count >= 6)
 ### Create df for brand+model price analysis
 df_model_price <- df_current %>% 
   select(title, brand,model,price, year, location, url, sold_status) %>%
-  filter(year >= 2013, brand %in% names$brand, model %in% df_model_names$model) %>% 
+  filter(year >= 2013, brand %in% names$brand, model %in% df_model_names$model, brand != "Custom", brand != "Looking") %>% 
   arrange(brand)
 
 

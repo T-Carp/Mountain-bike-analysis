@@ -5,8 +5,8 @@ title: "R Notebook"
 
 ### Shiny Packages and Data Load
 ```{r}
-library(shiny)
-library(shinyWidgets)
+suppressMessages(library(shiny))
+suppressMessages(library(shinyWidgets))
 suppressMessages(library(ggplot2))
 suppressMessages(library(gganimate))
 suppressMessages(library(crosstalk))
@@ -15,7 +15,8 @@ suppressMessages(library(ggdark))
 suppressMessages(library(DT))
 suppressMessages(library(scales))
 suppressMessages(library(ggthemes))
-library(shinythemes)
+suppressMessages(library(RMySQL))
+suppressMessages(library(shinythemes))
 
 creds <- read.csv("/Users/t-carpen93/Data Projects/Credentials/creds.csv")
 user <- as.character(creds[,2:2])
@@ -36,9 +37,6 @@ df_model_price <- dbGetQuery(cn, query)
 dbDisconnect(cn)
 ```
 
-### Align filters within bootsrap columns
-###Align plotly graph within bootstrap columns
-### Explore plotly themes
 
 ### User Experience
 ```{r}
@@ -61,7 +59,7 @@ fluidRow(
 fluidRow( 
            column(3,""),
            column(6,p("Is this bike a good deal?   How is it priced compared to other models?   What price should I sell my bike for?") , 
-                    p("Using data from pinkbike.com ads, we can explore how different bike models are priced and how asking-prices change over time.  This tool can also help you quickly spot potential deals"), align = "center"),
+                    p("Using data from pinkbike.com ads, we can explore how different bike models are priced and how asking-prices change over time.  This tool can also help you quickly spot potential deals where bikes are priced below average.  Dataset is not inclusive of every bike on pinkbike, only the most popular models."), align = "center"),
            column(3,"")),
 
 fluidRow( 
@@ -136,7 +134,7 @@ filter_model <- reactive({
  
  
   output$scatter <- renderPlotly({
-    validate(
+    shiny::validate(
       need(!is.null(input$select2), "Loading...")
     )
   model_year <- reorder(shared_data$data()$year, desc(shared_data$data()$year))
@@ -165,7 +163,7 @@ filter_model <- reactive({
   output$table <- renderDT(
 
        shared_data$data(withSelection = TRUE) %>% filter(selected_ | is.na(selected_)) %>% 
-                  mutate(url = paste0("<a href='",url,"'>",url,"</a>")),escape = FALSE) 
+                  mutate(url = paste0("<a href='",url,"'",'target="_blank"',">",url,"</a>")),escape = FALSE) 
    
 
 }
