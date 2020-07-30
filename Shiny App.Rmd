@@ -33,7 +33,8 @@ cn <- dbConnect(RMySQL::MySQL(),
                 )
 
 query <- "SELECT * FROM model_price_view"
-df_model_price <- dbGetQuery(cn, query)
+df_model_price <- dbGetQuery(cn, query) %>% 
+  select(-row_names)
 dbDisconnect(cn)
 ```
 
@@ -65,7 +66,7 @@ fluidRow(
 fluidRow( 
           column(4,""),
           column(2, 
-                 div(style="display: inline-block;vertical-align:top; align = center;width:100%;text-align:center", 
+                 div(style="display: inline-block; vertical-align:top; align = center; width:100%; text-align:center", 
                         pickerInput("select1", 
                               h3("Select Brand"), 
                               choices = unique(df_model_price$brand),
@@ -90,17 +91,15 @@ fluidRow(
 
       # Output: Histogram ----
 fluidRow( 
-            column(3,""),
-            column(6, div(plotlyOutput("scatter"),style="display: width:100%; align = center")),
-            column(3,"")
+           
+            column(12, div(plotlyOutput("scatter"),style="display: width:100%; align = center; margin-left:10%; margin-right:10%"))
+         
           ),
 fluidRow( 
            div("",style="height:35px")
           ),
 fluidRow(
-          column(2,""),
-          column(8, div(DTOutput('table'),style="width:100%")),
-          column(2,"")
+          column(12, div(DTOutput('table'),style="margin-left:5%; margin-right:5%")),
         )
       
 
@@ -163,7 +162,7 @@ filter_model <- reactive({
   output$table <- renderDT(
 
        shared_data$data(withSelection = TRUE) %>% filter(selected_ | is.na(selected_)) %>% 
-                  mutate(url = paste0("<a href='",url,"'",'target="_blank"',">",url,"</a>")),escape = FALSE) 
+                  mutate(url = paste0("<a href='",url,"'",'target="_blank"',">",url,"</a>")),escape = FALSE,extensions = 'Responsive') 
    
 
 }
