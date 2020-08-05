@@ -2,6 +2,10 @@
 title: "R Notebook"
 
 ---
+### Make header text look better
+### Fix filter align for mobile
+### Fix ggplot tooltip
+
 
 ### Shiny Packages and Data Load
 ```{r}
@@ -59,30 +63,32 @@ fluidRow(
 
 fluidRow( 
            column(3,""),
-           column(6,p("Is this bike a good deal?   How is it priced compared to other models?   What price should I sell my bike for?") , 
+           
+           column(6,
+                  p("Is this bike a good deal?   How is it priced compared to other models?   What price should I sell my bike for?") , 
                     p("Using data from pinkbike.com ads, we can explore how different bike models are priced and how asking-prices change over time.  This tool can also help you quickly spot potential deals where bikes are priced below average.  Dataset is not inclusive of every bike on pinkbike, only the most popular models."), align = "center"),
+           
            column(3,"")),
 
 fluidRow( 
-          column(4,""),
-          column(2, 
-                 div(style="display: inline-block; vertical-align:top; align = center; width:100%; text-align:center", 
+          column(3,""),
+          column(3,align="center",
+                 
                         pickerInput("select1", 
                               h3("Select Brand"), 
                               choices = unique(df_model_price$brand),
-                              selected = NULL))),
+                              selected = "Santa_Cruz")),
         
-         column(2,
-           div(style="display: inline-block;align = center;width:100%;text-align:center",
+         column(3,align="center",
+           
                  pickerInput("select2", 
                               h3("Select Model"),
                               choices = NULL,
                               options = list(`actions-box` = TRUE),
                               multiple = TRUE
-                           
-                              ))),
+                              )),
 
-          column(4,"")
+          column(3,"")
         ),
 
 fluidRow( 
