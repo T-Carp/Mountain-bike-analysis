@@ -13,10 +13,14 @@ suppressMessages(library(scales))
 suppressMessages(library(ggthemes))
 suppressMessages(library(RMySQL))
 suppressMessages(library(shinythemes))
+suppressMessages(library(dplyr))
 
-creds <- read.csv("/Users/t-carpen93/Data Projects/Credentials/creds.csv")
-user <- as.character(creds[,2:2])
-password <- as.character(creds[,3:3])
+#creds <- read.csv("/Users/t-carpen93/Data Projects/Credentials/creds.csv")
+#user <- as.character(creds[,2:2])
+#password <- as.character(creds[,3:3])
+
+user <- "carpetro"
+password <- "Tcarpen93!"
 
 ### Get data from DB.  Creds read from local file
 cn <- dbConnect(RMySQL::MySQL(), 
@@ -52,10 +56,18 @@ ui <- bootstrapPage(theme = shinytheme("flatly"),
                     
                     fluidRow( 
                         
-                        
+  
                         column(12,
-                               div(p("Using data from pinkbike.com ads, we can explore how different bike models are priced and how asking-prices change over time.  This tool can help you quickly spot potential deals where bikes are priced below average.  Dataset does not include every ad on pinkbike, only the most popular models are captured"),style="display: width:100%; align = center; margin-left:22%;margin-right:22%")),
-                        
+                               div(
+                                p("Using data from pinkbike.com ads, we can explore how different bike models are priced and how asking-prices change over time.
+                                   This tool can help you quickly spot potential deals where bikes are priced below average.  
+                                   Dataset does not include every ad on pinkbike, only the most popular models are captured.", style = "line-height: 1.6;font-size:120%"),
+                                   style="display: width:100%; align = center; margin-left:22%;margin-right:22%"))
+           
+                    ),
+                    
+                    fluidRow( 
+                        div("",style="height:10px")
                     ),
                     
                     fluidRow( 
@@ -84,9 +96,14 @@ ui <- bootstrapPage(theme = shinytheme("flatly"),
                     ),
                     
                     # Output: Histogram ----
+                    fluidRow(  
+                    column(12,
+                           div(p("Filter the data table by click-dragging over a point on the scatter plot.   Double-click plot to reset selection")
+                               ,style="display: width:100%; align = left; margin-left:7%;margin-right:7%"))),
+       
                     fluidRow( 
                         
-                        column(12, div(plotlyOutput("scatter"),style="display: width:100%; align = center; margin-left:7%; margin-right:7%"))
+                        column(12, div(plotlyOutput("scatter"),style="display: width:100%; align = center; margin-left:7%; margin-right:7%;"))
                         
                     ),
                     fluidRow( 
@@ -164,7 +181,7 @@ server <- function(input, output,session) {
         },escape = FALSE,extensions = 'Responsive',options = 
             list(searching = FALSE,paging = FALSE,
                  language = list(
-                     zeroRecords = "Double click the scatter plot to update the table with your new selection")              
+                     zeroRecords = "Double click the scatter plot to update this table with your new selection")              
             ))})
     
     
