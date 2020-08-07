@@ -1,11 +1,7 @@
 ---
-title: "R Notebook"
+title: "Shiny App Notebook"
 
 ---
-### Make header text look better
-
-
-
 ### Shiny Packages and Data Load
 ```{r}
 suppressMessages(library(shiny))
@@ -46,27 +42,27 @@ dbDisconnect(cn)
 ```{r}
 ui <- bootstrapPage(theme = shinytheme("flatly"),
                   
-h1("Hot Bikes", 
-      style = "font-family: 'Lato',
+h1("Bike Spotter", 
+      style = "font-family: 'Century Gothic',
         font-weight: 400; line-height: 1.1; 
         color: #FFFFFF;
         text-align:center;
-   background-color:#2C3E50;
-   height:50px;
-   bottom-padding: 25px;
-   margin: 0px;"),
+        background-color:#2C3E50;
+        height:50px;
+        bottom-padding: 25px;
+        margin: 0px;"),
 
 fluidRow( 
            div("",style="height:35px")
           ),
 
 fluidRow( 
-           column(3,""),
+         
            
-           column(6,
-                    p("Using data from pinkbike.com ads, we can explore how different bike models are priced and how asking-prices change over time.  This tool can help you quickly spot potential deals where bikes are priced below average.  Dataset does not include every ad on pinkbike, only the most popular models are captured"), align = "left;line-height: 150%"),
+           column(12,
+                    div(p("Using data from pinkbike.com ads, we can explore how different bike models are priced and how asking-prices change over time.  This tool can help you quickly spot potential deals where bikes are priced below average.  Dataset does not include every ad on pinkbike, only the most popular models are captured"),style="display: width:100%; align = center; margin-left:22%;margin-right:22%")),
            
-           column(3,"")),
+         ),
 
 fluidRow( 
           column(3,""),
@@ -96,7 +92,7 @@ fluidRow(
       # Output: Histogram ----
 fluidRow( 
            
-            column(12, div(plotlyOutput("scatter"),style="display: width:100%; align = center; margin-left:10%; margin-right:10%"))
+            column(12, div(plotlyOutput("scatter"),style="display: width:100%; align = center; margin-left:7%; margin-right:7%"))
          
           ),
 fluidRow( 
@@ -122,10 +118,10 @@ filter_model <- reactive({
                            filter(df_model_price, brand == input$select1)
                         })
    
-  observeEvent(filter_model(), {
+    observeEvent(filter_model(), {
     choices <- unique(filter_model()$model)
     updatePickerInput(session,"select2", choices = choices, selected = choices) 
-  })
+                                 })
 
   
   
@@ -133,40 +129,52 @@ filter_model <- reactive({
     df_model_price %>% filter(model %in% input$select2)
     })
 
- shared_data <- highlight_key(data, key = ~url)
+  shared_data <- highlight_key(data, key = ~url)
  
  
   output$scatter <- renderPlotly({
+    
     shiny::validate(
-      need(!is.null(input$select2), "Loading...")
+      need(!is.null(input$select2), "Please make a selection...")
     )
+    
   model_year <- reorder(shared_data$data()$year, desc(shared_data$data()$year))
     
   
    p <- ggplot(shared_data,aes(x = model_year, y = price, label = model)) + 
-      geom_jitter(color = "#5DBC9B", size = 1)+
-      stat_summary(fun.y=mean, geom="line",lwd=1,aes(group=2),color = "#2C3E50")+
-    theme_fivethirtyeight()+
-     theme(
-          plot.title = element_text(color="#2C3E50", size=14, family="Lato"),
-          plot.subtitle = element_text(color="#2C3E50", size=7, family="Lato"))+
-  scale_y_continuous(labels = dollar)+
-  labs(title = "Asking Price By Model Year")+
-  xlab("Model Year")+
-  ylab("Asking Price") 
+            geom_jitter(color = "#5DBC9B", size = 1)+
+            stat_summary(fun.y=mean, geom="line",lwd=1,aes(group=2),color = "#2C3E50")+
+            theme_fivethirtyeight()+
+            theme(
+                plot.title = element_text(color="#2C3E50", size=14, family="Lato"),
+                plot.subtitle = element_text(color="#2C3E50", size=7, family="Lato"))+
+            scale_y_continuous(labels = dollar)+
+            labs(title = "Asking Price by Brand and Model")+
+            xlab("Model Year")+
+            ylab("Asking Price") 
    
    
- ggplotly(p, tooltip = c("model","price"))%>% 
-  highlight(on = "plotly_selected", off = "plotly_deselect", persistent = FALSE) 
+  ggplotly(p, tooltip = c("model","price"))%>% 
+    highlight(on = "plotly_selected", off = "plotly_deselect", persistent = FALSE) 
    
 
   })
   
   
-  output$table <- renderDT(
+  output$table <- DT::renderDataTable({
+    
+     shiny::validate(
+        need(!is.null(input$select2), "Please make a selection...")
+      )
 
-       shared_data$data(withSelection = TRUE) %>% filter(selected_ | is.na(selected_)) %>% 
-                  mutate(url = paste0("<a href='",url,"'",'target="_blank"',">",url,"</a>")),escape = FALSE,extensions = 'Responsive') 
+        DT::datatable({
+          shared_data$data(withSelection = TRUE) %>% filter(selected_ | is.na(selected_)) %>% 
+                  mutate(url = paste0("<a href='",url,"'",'target="_blank"',">",url,"</a>"))
+          },escape = FALSE,extensions = 'Responsive',options = 
+              list(searching = FALSE,paging = FALSE,
+                  language = list(
+                  zeroRecords = "Double click the scatter plot to update the table with your new selection")              
+                  ))})
    
 
 }
