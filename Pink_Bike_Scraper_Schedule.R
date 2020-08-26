@@ -205,6 +205,7 @@ df_model_names <- df_current %>%
 ### Model has to appear at least 6 times to appear in data.
 df_model_names <- df_model_names %>% filter(count >= 6)
 
+
 ### Create df for brand+model price analysis
 df_model_price <- df_current %>% 
                   select(title, brand,model,price, year, location, url, sold_status) %>%
