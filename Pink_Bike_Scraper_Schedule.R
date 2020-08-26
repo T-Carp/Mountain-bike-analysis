@@ -156,7 +156,6 @@ df <- df %>%
 
 
 ### Create dataframe of sold bikes
-
 sold_df <- df %>% 
            filter(sold_status == "Sold")
 
@@ -219,8 +218,6 @@ df_model_price <- df_current %>%
 
 
 ### Append/ overwrite data to database tables.
-
-
 ###Master table to adds not cleaned. Always Growing
 dbWriteTable(cn, name = "bikes_master", value = df, append = TRUE)
 
