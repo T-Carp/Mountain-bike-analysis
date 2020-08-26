@@ -1,11 +1,6 @@
----
-title: "Pink Bike Scraper"
-
----
 
 
 ### Essential Packages
-```{r}
 suppressMessages(library(tidyverse))
 suppressMessages(library(rvest))
 suppressMessages(library(xml2))
@@ -14,11 +9,10 @@ suppressMessages(library(stringr))
 suppressMessages(library(lubridate))
 suppressMessages(library(RMySQL))
 suppressMessages(library(DBI))
-```
+suppressMessages(library(cronR))
+
 
 ### Scrape Pink Bike, Create Data Frame
-```{r}
-#Function to navigate to new URL and grab updated date for post
 get_date <- function(session, link) {
               more_details_pg <- jump_to(session,link)  
               row_with_date <- html_node(more_details_pg,'.buysell-details-column+ .buysell-details-column')
@@ -36,12 +30,9 @@ get_sold_status <- function(session, link) {
 }
 
 
-```
-
 
 
 ### Web Scrape
-```{r}
 df_list <- list()
 
 url <- paste("https://www.pinkbike.com/buysell/list/?location=194-*-*&page=1&category=2")
@@ -92,11 +83,11 @@ for (l in 1:length(pages))
 
 df <- as_tibble(bind_rows(df_list)) 
 
-```
+
 
 
 ### Data Prep to master dataframe
-```{r}
+
 ### Remove duplicate posts
   df <- distinct(df)
 
@@ -135,20 +126,20 @@ df <- as_tibble(bind_rows(df_list))
   df <- df %>% mutate(dates = mdy_hms(dates)) %>% rename(updated_at = dates) 
   df_current <- df
 
-```
+
 
 
 
 ### Evaluate what scraped data does not allready exist in database 
-```{r}
-creds <- read.csv("/Users/t-carpen93/Data Projects/Credentials/creds.csv")
+
+creds <- read.csv("/Users/t-carpen93/Data_Projects/Credentials/creds.csv")
 user <- as.character(creds[,2:2])
 password <- as.character(creds[,3:3])
 
 cn <- dbConnect(RMySQL::MySQL(), 
                 username = user, 
                 password = password, 
-                host = "shredsleds.ch4frojqjmlp.us-west-2.rds.amazonaws.com", 
+                host = "bike-spotter.ch4frojqjmlp.us-west-2.rds.amazonaws.com", 
                 port = 3306,
                 dbname = "bikes"
                 )
@@ -162,18 +153,18 @@ db_data <- dbGetQuery(cn, query)
 df <- df %>% 
   filter(url %notin% db_data$url)
 
-```
+
 
 ### Create dataframe of sold bikes
-```{r}
+
 sold_df <- df %>% 
            filter(sold_status == "Sold")
 
-```
+
 
 ### Clean data and create child-dataframes for price analysis.  
 ####Parent dataframe = df.  Child dataframes = c("df_price","df_model_names") and are derived from df
-```{r}
+
 ### Get list of most popular brands in dataset.  Brand has to appear > 30 times.
 names <- df_current %>% 
          select(brand) %>% 
@@ -200,11 +191,11 @@ top_brands <- unique(names$brand)
 df_price <- df_price %>% filter(brand %in% top_brands)
 df_price <- as_tibble(df_price)
 
-```
+
 
 
 ### Create df_model_price which is the data source for the shiny app. 
-```{r}
+
 ### Create df for reactive filters
 df_model_names <- df_current %>% 
                   select(brand, model) %>% 
@@ -225,10 +216,10 @@ df_model_price <- df_current %>%
                   arrange(brand)
 
 
-```
+
 
 ### Append/ overwrite data to database tables.
-```{r}
+
 
 ###Master table to adds not cleaned. Always Growing
 dbWriteTable(cn, name = "bikes_master", value = df, append = TRUE)
@@ -244,5 +235,5 @@ dbWriteTable(cn, name = "brand_price_view", value = df_price, overwrite = TRUE)
 
 
 dbDisconnect(cn)
-```
+
 
