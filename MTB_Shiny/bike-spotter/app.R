@@ -62,7 +62,7 @@ ui <- bootstrapPage(theme = shinytheme("flatly"),
                                div(
                                    p("Using data from pinkbike.com ads, we can explore how different bike models are priced and how asking-prices change over time.
                                    This tool can help you quickly spot potential deals where bikes are priced below average.  
-                                   Dataset does not include every ad on pinkbike, only the most popular models are captured.", style = "line-height: 1.6;font-size:120%"),
+                                   Dataset does not include every ad on pinkbike, only the most popular models are captured within the United States", style = "line-height: 1.6;font-size:120%"),
                                    style="display: width:100%; align = center; margin-left:22%;margin-right:22%"))
                         
                     ),
