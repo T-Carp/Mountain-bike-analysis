@@ -190,9 +190,6 @@ top_brands <- unique(names$brand)
 df_price <- df_price %>% filter(brand %in% top_brands)
 df_price <- as_tibble(df_price)
 
-
-
-
 ### Create df_model_price which is the data source for the shiny app. 
 
 ### Create df for reactive filters
