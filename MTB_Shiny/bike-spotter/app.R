@@ -20,8 +20,6 @@ user <- as.character(creds[,2:2])
 password <- as.character(creds[,3:3])
 
 
-### Research how to hide usrnm and pswrd when publishing to web.
-
 
 ### Get data from DB.  Creds read from local file
 cn <- dbConnect(RMySQL::MySQL(), 
@@ -40,7 +38,7 @@ dbDisconnect(cn)
 
 ### User Experience
 ui <- bootstrapPage(theme = shinytheme("flatly"),
-                    
+                    HTML('<meta name="viewport" content="width=1024">'),                   
                     h1("Bike Spotter", 
                        style = "font-family: 'Century Gothic',
         font-weight: 400; line-height: 1.1; 
@@ -62,8 +60,8 @@ ui <- bootstrapPage(theme = shinytheme("flatly"),
                                div(
                                    p("Using data from pinkbike.com ads, we can explore how different bike models are priced and how asking-prices change over time.
                                    This tool can help you quickly spot potential deals where bikes are priced below average.  
-                                   Dataset does not include every ad on pinkbike, only the most popular models are captured within the United States", style = "line-height: 1.6;font-size:120%"),
-                                   style="display: width:100%; align = center; margin-left:22%;margin-right:22%"))
+                                   Dataset does not include every ad on pinkbike, only the most popular models are captured within the United States", style = "font-size:140%"),
+                                   style="display: width:100%; align = center; margin-left:15%;margin-right:15%"))
                         
                     ),
                     
@@ -76,14 +74,14 @@ ui <- bootstrapPage(theme = shinytheme("flatly"),
                         column(3,align="center",
                                
                                pickerInput("select1", 
-                                           h3("Select Brand"), 
+                                           h3("Select Brand", style = "font-size: 2vh"), 
                                            choices = unique(df_model_price$brand),
                                            selected = "Santa_Cruz")),
                         
                         column(3,align="center",
                                
                                pickerInput("select2", 
-                                           h3("Select Model"),
+                                           h3("Select Model",style = "font-size:2vh"),
                                            choices = NULL,
                                            options = list(`actions-box` = TRUE),
                                            multiple = TRUE
@@ -100,7 +98,7 @@ ui <- bootstrapPage(theme = shinytheme("flatly"),
                     fluidRow(  
                         column(12,
                                div(p("Filter the data table by click-dragging over a point on the scatter plot.   Double-click plot to reset selection")
-                                   ,style="display: width:100%; align = left; margin-left:7%;margin-right:7%"))),
+                                   ,style="font-size:100%; display: width:100%; align = left; margin-left:7%;margin-right:7%"))),
                     
                     fluidRow( 
                         
