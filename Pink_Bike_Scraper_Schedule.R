@@ -10,7 +10,7 @@ suppressMessages(library(lubridate))
 suppressMessages(library(RMySQL))
 suppressMessages(library(DBI))
 suppressMessages(library(cronR))
-
+suppressMessages(library(googlesheets4))
 
 ### Scrape Pink Bike, Create Data Frame
 get_date <- function(session, link) {
@@ -79,6 +79,7 @@ for (l in 1:length(pages))
            html_text(trim=TRUE)  
   
   df_list[[l]] <- tibble(title, seller, location, price, url,dates,sold)
+  Sys.sleep(5)
 }
 
 df <- as_tibble(bind_rows(df_list)) 
@@ -132,23 +133,10 @@ df <- as_tibble(bind_rows(df_list))
 
 ### Evaluate what scraped data does not allready exist in database 
 
-creds <- read.csv("/Users/t-carpen93/Data_Projects/Credentials/creds.csv")
-user <- as.character(creds[,2:2])
-password <- as.character(creds[,3:3])
+ss <- "https://docs.google.com/spreadsheets/d/1Ff72J4yqNBg5Rp2vTRoaPQIPwsrtxtJGoPvY2LHBdJM/edit?usp=sharing"
+  db_data <- read_sheet(ss) 
 
-cn <- dbConnect(RMySQL::MySQL(), 
-                username = user, 
-                password = password, 
-                host = "bike-spotter.ch4frojqjmlp.us-west-2.rds.amazonaws.com", 
-                port = 3306,
-                dbname = "bikes"
-                )
-
-query <- "SELECT url FROM bikes_master"
-db_data <- dbGetQuery(cn, query)
-
-
-`%notin%` <- Negate(`%in%`)
+  `%notin%` <- Negate(`%in%`)
 
 df <- df %>% 
   filter(url %notin% db_data$url)
@@ -217,18 +205,20 @@ df_model_price <- df_current %>%
 
 ### Append/ overwrite data to database tables.
 ###Master table to adds not cleaned. Always Growing
-dbWriteTable(cn, name = "bikes_master", value = df, append = TRUE)
+sheet_append(ss,df,sheet = "bikes_master")
 
 ### Master list of bikes that are sold.  Always growing
-dbWriteTable(cn, name = "sold_bikes", value = sold_df, append = TRUE)
+sold_cc <- "https://docs.google.com/spreadsheets/d/1aKObEk8J1WG0OTBulS_v380-05JvTBLhyVpMVVTy42A/edit?usp=sharing"
+sheet_append(sold_cc,sold_df,sheet = "sold_bikes_master")
 
 ### Used for shiny app, table is always over-written to show bikes currently on pinkbike
-dbWriteTable(cn, name = "model_price_view", value = df_model_price, overwrite = TRUE)
+mprice_cc<-"https://docs.google.com/spreadsheets/d/1n-VW32S_githuJ49e30PagupnjCpCgVI4SRO-Wv8uyw/edit?usp=sharing"
+sheet_write(df_model_price,mprice_cc,sheet = "model_price_master")
 
 ### Datamart for price analysis, table is always over-written for bikes currently on pinkbike
-dbWriteTable(cn, name = "brand_price_view", value = df_price, overwrite = TRUE)
+price_view_cc <-"https://docs.google.com/spreadsheets/d/1aSrs9_oXl58NjqmfX_hUen2Pw4J9U-ahTjAaeK7zF3Q/edit?usp=sharing"
+sheet_write(df_price,price_view_cc,sheet = "Sheet1")
 
 
-dbDisconnect(cn)
 
 

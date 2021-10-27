@@ -15,26 +15,19 @@ suppressMessages(library(RMySQL))
 suppressMessages(library(shinythemes))
 suppressMessages(library(dplyr))
 suppressMessages(library(rsconnect))
-creds <- read.csv("creds.csv")
-user <- as.character(creds[,2:2])
-password <- as.character(creds[,3:3])
+suppressMessages(library(googlesheets4))
+suppressMessages(library(gargle))
 
 
 
-### Get data from DB.  Creds read from local file
-cn <- dbConnect(RMySQL::MySQL(), 
-                
-                username = user, 
-                password = password, 
-                host = "bike-spotter.ch4frojqjmlp.us-west-2.rds.amazonaws.com", 
-                port = 3306,
-                dbname = "bikes"
-)
+### Get data from google sheets.  
+gs4_auth(cache = "secrets",
+         email = "tmcarpenter21@gmail.com")
 
-query <- "SELECT * FROM model_price_view"
-df_model_price <- dbGetQuery(cn, query) %>% 
-    select(-row_names)
-dbDisconnect(cn)
+
+mprice_cc<-"https://docs.google.com/spreadsheets/d/1n-VW32S_githuJ49e30PagupnjCpCgVI4SRO-Wv8uyw/edit?usp=sharing"
+df_model_price  <- read_sheet(mprice_cc) 
+
 
 ### User Experience
 ui <- bootstrapPage(theme = shinytheme("flatly"),
