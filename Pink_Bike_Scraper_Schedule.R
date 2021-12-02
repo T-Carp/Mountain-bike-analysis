@@ -14,7 +14,7 @@ suppressMessages(library(googlesheets4))
 
 ### Scrape Pink Bike, Create Data Frame
 get_date <- function(session, link) {
-              more_details_pg <- jump_to(session,link)  
+              more_details_pg <- session_jump_to(session,link)  
               row_with_date <- html_node(more_details_pg,'.buysell-details-column+ .buysell-details-column')
               date_text <- str_extract(row_with_date %>% html_text(),
                          "([a-zA-Z]{3,}-[0-9]{1,2}-[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2})")
@@ -110,6 +110,9 @@ df <- as_tibble(bind_rows(df_list))
 ### Prep for string
   df$title <- str_replace_all(df$title, "Santa Cruz", "Santa_Cruz")
   df$title <- str_replace_all(df$title, "SANTA CRUZ", "Santa_Cruz")
+  df$title <- str_replace_all(df$title, "Yeti", "YETI")
+  df$title <- str_replace_all(df$title, "Yt", "YT")
+  df$title <- str_replace_all(df$title, "specialized", "Specialized")
   df$title <- str_replace_all(df$title, "Rocky Mountain", "Rocky_Mountain")
 
   df <- df %>% 
@@ -157,7 +160,7 @@ names <- df_current %>%
          select(brand) %>% 
          group_by(brand) %>% 
          summarize(count = n()) %>% 
-         filter(count >= 20, brand != c("Large", "Custom", "Stumpjumper", "Carbon"))
+         filter(count >= 20, brand %notin% c("Large", "Custom", "Stumpjumper", "Carbon", "XL", "Medium"))
 
 ### Build df_price which can be used to measure % depreciation in asking price over time. Overwrite table in database
 df_price <- df_current %>% 
