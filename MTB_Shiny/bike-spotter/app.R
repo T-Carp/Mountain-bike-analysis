@@ -115,7 +115,7 @@ server <- function(input, output,session) {
     
     
     filter_model <- reactive({
-        filter(df_model_price, brand == input$select1)
+        filter(df_model_price, brand %in% input$select1)
     })
     
     observeEvent(filter_model(), {
