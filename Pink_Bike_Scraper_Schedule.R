@@ -35,7 +35,7 @@ get_sold_status <- function(session, link) {
 ### Web Scrape
 df_list <- list()
 
-url <- paste("https://www.pinkbike.com/buysell/list/?location=194-*-*&page=1&category=2")
+url <- paste("https://www.pinkbike.com/buysell/list/?location=194-*-*&category=102,2")
 
 ###Start web session. Imagine this is the script actively doing stuff on the page
 session <- html_session(url)
@@ -48,9 +48,9 @@ total_count <- html_node(session, 'li:nth-child(13) a') %>%
 ### Create vector of page results.  
 pages <- c(1:total_count)
 
-for (l in 1:length(pages))
+for (l in pages)
 {
-  new_url <- paste("https://www.pinkbike.com/buysell/list/?location=194-*-*&page=",pages[l],"&category=2", sep = "")
+  new_url <- paste("https://www.pinkbike.com/buysell/list/?location=194-*-*&page=",pages[l],"&category=102,2", sep = "")
   session <- html_session(new_url)
   
   title <- html_nodes(session, '.bsitem div a') %>% 
@@ -75,7 +75,7 @@ for (l in 1:length(pages))
               html_text(trim=TRUE) 
         
   
-  price <- html_nodes(session, 'tr~ tr+ tr td > b') %>% 
+  price <- html_nodes(session, '.bsitem-price b') %>% 
            html_text(trim=TRUE)  
   
   df_list[[l]] <- tibble(title, seller, location, price, url,dates,sold)
@@ -94,7 +94,7 @@ df <- as_tibble(bind_rows(df_list))
 
 ### Clean price column
   df$price <- str_remove(df$price,"USD")
-  df$price <- as.integer(str_remove(df$price,"\\$"))
+  df$price <- as.numeric(gsub("$",'',df$price, fixed = T))
 
 ### Remove outliers
   df <- df %>% 
@@ -108,13 +108,10 @@ df <- as_tibble(bind_rows(df_list))
         rename(sold_status = sold)
 
 ### Prep for string
-  df$title <- str_replace_all(df$title, "Santa Cruz", "Santa_Cruz")
-  df$title <- str_replace_all(df$title, "SANTA CRUZ", "Santa_Cruz")
-  df$title <- str_replace_all(df$title, "Yeti", "YETI")
-  df$title <- str_replace_all(df$title, "Yt", "YT")
-  df$title <- str_replace_all(df$title, "specialized", "Specialized")
-  df$title <- str_replace_all(df$title, "Rocky Mountain", "Rocky_Mountain")
-
+  df$title <- tolower(df$title)
+  df$title <- str_replace_all(df$title, "santa cruz", "santa_Cruz")
+  df$title <- str_to_title(df$title)
+  
   df <- df %>% 
         mutate(title  = trimws(title))
 
@@ -160,7 +157,7 @@ names <- df_current %>%
          select(brand) %>% 
          group_by(brand) %>% 
          summarize(count = n()) %>% 
-         filter(count >= 20, brand %notin% c("Large", "Custom", "Stumpjumper", "Carbon", "XL", "Medium"))
+         filter(count >= 20, brand %notin% c("Large", "Custom", "Stumpjumper", "Carbon", "XL", "Medium", "New"))
 
 ### Build df_price which can be used to measure % depreciation in asking price over time. Overwrite table in database
 df_price <- df_current %>% 
@@ -186,7 +183,7 @@ df_price <- as_tibble(df_price)
 ### Create df for reactive filters
 df_model_names <- df_current %>% 
                   select(brand, model) %>% 
-                  filter(brand %in% top_brands, model != "carbon") %>% 
+                  filter(brand %in% top_brands) %>% 
                   group_by(brand,model) %>% 
                   summarise(count = n())
 
